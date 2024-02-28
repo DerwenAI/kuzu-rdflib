@@ -32,7 +32,6 @@ python3 -m pip install -r requirements.txt
 First, initialize the example RDF data from the `uni.ttl` file:
 
 ```bash
-rm -rf db
 python3 prep.py
 ```
 
