@@ -2,11 +2,10 @@
 # -*- coding: utf-8 -*-
 
 """
-Proof of concept for RDFlib atop KùzuDB
+Proof-of-concept for RDFlib atop KùzuDB
 """
 
 from icecream import ic
-from rdflib.store import Store  # type: ignore
 import rdflib  # type: ignore
 
 
@@ -24,6 +23,12 @@ if __name__ == "__main__":
         identifier = "xyzzy",
     )
 
+    graph.open(
+        configuration = "db",
+        create = True,
+    )
+
+    ic(len(graph))
 
     query = """
 SELECT ?src ?rel ?dst

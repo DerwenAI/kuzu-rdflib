@@ -12,13 +12,9 @@ from icecream import ic
 import chocolate  # type: ignore
 import kuzu
 
-from rdflib.store import Store  # type: ignore
+from rdflib.plugins.sparql.sparql import Query, Update
 import rdflib  # type: ignore
 
-
-DB_DIR: str = "db"
-DB = kuzu.Database(DB_DIR)
-CONN = kuzu.Connection(DB)
 
 QUERY_TRIPLES: str = """
 MATCH (s)-[p:UniKG_rt]-(o) RETURN s.iri, p.iri, o.iri
@@ -32,43 +28,63 @@ MATCH (s)-[p:UniKG_rt]-(o) RETURN count(*)
 ######################################################################
 ## class definitions
 
-class PropertyGraph (Store):
+class PropertyGraph (rdflib.store.Store):
     """
-A subclass of `rdflib.Store` to use as a plugin, integrating the W3C stack.
+A subclass of `rdflib.store.Store` to use as a plugin, to integrate
+the W3C stack in Python.
     """
 
     def __init__ (
         self,
-        configuration: typing.Optional[str] = None,
+        *,
+        configuration: typing.Optional[ str ] = None,
+        identifier: typing.Optional[ rdflib.term.Identifier ] = None,
         ) -> None:
         """
 Instance constructor
         """
         super().__init__(configuration)
-        self.__namespace: dict = {}
-        self.__prefix: dict = {}
+
+        self.identifier: rdflib.term.Identifier = identifier
+        self.__namespace: typing.Dict[ str, rdflib.term.URIRef ] = {}
+        self.__prefix: typing.Dict[ rdflib.term.URIRef, str ] = {}
+
+        self.conn: typing.Optional[ kuzu.Connection ] = None
 
 
 ######################################################################
-## rdflib.Store implementation
+## rdflib.store.Store implementation
 
     @classmethod
-    def get_lpg (
+    def get_graph (
         cls,
         graph: rdflib.Graph,
         ) -> "PropertyGraph":
         """
 An accessor method to extract the PropertyGraph from an RDF graph,
-which is a private member of rdflib.Graph.
+which is a private member of the `rdflib.Graph` object.
         """
         return graph._Graph__store  # type: ignore # pylint: disable=W0212
+
+
+    def open (
+        self,
+        configuration: str,
+        create: bool = False,
+        ) -> typing.Optional[ int ]:
+        """
+Opens the Store/connection specified by the configuration string.
+        """
+        self.conn = kuzu.Connection(kuzu.Database(configuration))
+
+        return rdflib.store.VALID_STORE
 
 
     def add (  # type: ignore # pylint: disable=R0201,W0221
         self,
         triple: typing.Tuple,
-        context:str,  # pylint: disable=W0613
         *,
+        context: typing.Optional[ rdflib.graph._ContextType ] = None,  # pylint: disable=W0613
         quoted: bool = False,  # pylint: disable=W0613
         ) -> None:
         """
@@ -92,7 +108,7 @@ the store is not formula-aware.
         self,
         triple_pattern: typing.Tuple,
         *,
-        context: str = None,  # pylint: disable=W0613
+        context: typing.Optional[ rdflib.graph._ContextType ] = None,  # pylint: disable=W0613
         ) -> None:
         """
 Remove the set of triples matching the pattern from the store.
@@ -104,10 +120,15 @@ Remove the set of triples matching the pattern from the store.
 
     def triples (  # type: ignore # pylint: disable=R0201,W0221
         self,
-        triple_pattern: typing.Tuple,
+        triple_pattern: rdflib.graph._TriplePatternType,
         *,
-        context: str = None,  # pylint: disable=W0613
-        ) -> typing.Generator:
+        context: typing.Optional[ rdflib.graph._ContextType ] = None,  # pylint: disable=W0613
+        ) -> typing.Iterator[
+            typing.Tuple[
+                rdflib.graph._TripleType,
+                typing.Iterator[typing.Optional[ rdflib.graph._ContextType ]]
+            ]
+        ]:
         """
 A generator over all the triples matching the pattern.
 
@@ -117,19 +138,20 @@ Can include any objects for used for comparing against nodes in the store, for e
     context:
 A conjunctive query can be indicated by either providing a value of None, or a specific context can be queries by passing a Graph instance (if store is context aware).  (currently IGNORED)
         """
-        global CONN, QUERY_TRIPLES
-        results = CONN.execute(QUERY_TRIPLES)
+        global QUERY_TRIPLES
+
+        results: kuzu.query_result.QueryResult = self.conn.execute(QUERY_TRIPLES)
 
         while results.has_next():
             s, p, o = results.get_next()
-            triple = ( rdflib.URIRef(s), rdflib.URIRef(p), rdflib.URIRef(o), )
+            triple = ( rdflib.term.URIRef(s), rdflib.term.URIRef(p), rdflib.term.URIRef(o), )
             yield triple, self.__contexts()
 
 
     def __len__ (  # type: ignore # pylint: disable=W0221,W0222
         self,
         *,
-        context: str = None,  # pylint: disable=W0613
+        context: typing.Optional[ rdflib.graph._ContextType ] = None,  # pylint: disable=W0613
         ) -> int:
         """
 Number of statements in the store. This should only account for
@@ -140,15 +162,19 @@ context given.
     context:
 a graph instance to query or None
         """
-        count = 0
+        global QUERY_COUNT
+
+        results: kuzu.query_result.QueryResult = self.conn.execute(QUERY_COUNT)
+        count: int = results.get_next()[0]
+
         return count
 
 
     def __contexts (  # pylint: disable=R0201
         self
-        ) -> typing.Iterable:
+        ) -> typing.Generator[ rdflib.graph._ContextType, None, None ]:
         """
-A no-op.
+A no-op, since contexts are not yet supported.
         """
         # best way to return an empty generator
         l: list = []
@@ -158,11 +184,12 @@ A no-op.
     def bind (
         self,
         prefix: str,
-        namespace: str,
-        override: bool,
+        namespace: rdflib.term.URIRef,
+        *,
+        override: bool = True,
         ) -> None:
         """
-Bar.
+Should be identical to `Memory.bind`
         """
         self.__prefix[namespace] = prefix
         self.__namespace[prefix] = namespace
@@ -171,28 +198,28 @@ Bar.
     def namespace (
         self,
         prefix: str,
-        ) -> str:
+        ) -> typing.Optional[ rdflib.term.URIRef ]:
         """
-Bar.
+Should be identical to `Memory.namespace`
         """
         return self.__namespace.get(prefix, None)
 
 
     def prefix (
         self,
-        namespace: str,
-        ) -> str:
+        namespace: rdflib.term.URIRef,
+        ) -> typing.Optional[ str ]:
         """
-Bar.
+Should be identical to `Memory.prefix`
         """
         return self.__prefix.get(namespace, None)
 
 
     def namespaces (
         self
-        ) -> typing.Iterable:
+        ) -> typing.Iterator[typing.Tuple[ str, rdflib.term.URIRef ]]:
         """
-Bar.
+Should be identical to `Memory.namespaces`
         """
         for prefix, namespace in self.__namespace.items():
             yield prefix, namespace
@@ -200,12 +227,12 @@ Bar.
 
     def query (  # pylint: disable=W0235
         self,
-        query: str,
-        initNs: dict,
-        initBindings: dict,
+        query: typing.Union[ Query, str ],
+        initNs: typing.Mapping[ str, typing.Any ],
+        initBindings: typing.Mapping[ str, rdflib.term.Identifier ],
         queryGraph: typing.Any,
         **kwargs: typing.Any,
-        ) -> None:
+        ) -> rdflib.query.Result:
         """
 queryGraph is None, a URIRef or '__UNION__'
 
@@ -229,9 +256,9 @@ Values other than None obviously only makes sense for context-aware stores.)
 
     def update (  # pylint: disable=W0235
         self,
-        update: str,
-        initNs: dict,
-        initBindings: dict,
+        update: typing.Union[ Update, str ],
+        initNs: typing.Mapping[ str, typing.Any ],
+        initBindings: typing.Mapping[ str, rdflib.term.Identifier ],
         queryGraph: typing.Any,
         **kwargs: typing.Any,
         ) -> None:
