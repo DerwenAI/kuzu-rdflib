@@ -33,7 +33,7 @@ First, initialize the example RDF data from the `uni.ttl` file:
 
 ```bash
 rm -rf db
-python3 sparql.py
+python3 prep.py
 ```
 
 Then run the `demo.py` script to perform an example SPARQL query
