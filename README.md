@@ -12,7 +12,6 @@ For details about these libraries, see:
   - RDFlib <https://rdflib.readthedocs.io/>
   - pySHACL <https://github.com/RDFLib/pySHACL>
   - SHACL <https://www.w3.org/TR/shacl/>
-  - OWL-RL <https://github.com/RDFLib/OWL-RL>
 
 
 ## Set up
@@ -43,5 +42,3 @@ and SHACL validation:
 ```bash
 python3 demo.py
 ```
-
-
