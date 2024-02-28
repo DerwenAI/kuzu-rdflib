@@ -1,4 +1,4 @@
 chocolate >= 0.0.2
 icecream >= 2.1
-kuzu >= 0.0.2
-rdflib >= 6.3
+kuzu >= 0.3
+rdflib >= 7.0

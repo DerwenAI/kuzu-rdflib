@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 """
-an RDFlib `Store` plugin for W3C functionality
+RDFlib `Store` plugin for adapting RDF/W3C functionality into KùzuDB
 """
 
 import pathlib
@@ -20,6 +20,17 @@ DB_DIR: str = "db"
 DB = kuzu.Database(DB_DIR)
 CONN = kuzu.Connection(DB)
 
+QUERY_TRIPLES: str = """
+MATCH (s)-[p:UniKG_rt]-(o) RETURN s.iri, p.iri, o.iri
+"""
+
+QUERY_COUNT: str = """
+MATCH (s)-[p:UniKG_rt]-(o) RETURN count(*)
+"""
+
+
+######################################################################
+## class definitions
 
 class PropertyGraph (Store):
     """
@@ -74,6 +85,7 @@ the store is not formula-aware.
         """
         s, p, o = triple  # pylint: disable=W0612
         # DO SOMETHING?
+        # We're ignoring this operation, for now
 
 
     def remove (  # type: ignore # pylint: disable=R0201,W0221
@@ -87,6 +99,7 @@ Remove the set of triples matching the pattern from the store.
         """
         s, p, o = triple_pattern  # pylint: disable=W0612
         # DO SOMETHING?
+        # We're ignoring this operation, for now
 
 
     def triples (  # type: ignore # pylint: disable=R0201,W0221
@@ -104,12 +117,8 @@ Can include any objects for used for comparing against nodes in the store, for e
     context:
 A conjunctive query can be indicated by either providing a value of None, or a specific context can be queries by passing a Graph instance (if store is context aware).  (currently IGNORED)
         """
-        global CONN
-
-        query: str = """
-MATCH (src:subobj)-[r:triple]->(dst:subobj) RETURN src.iri, r.pred, dst.iri;
-        """
-        results = CONN.execute(query)
+        global CONN, QUERY_TRIPLES
+        results = CONN.execute(QUERY_TRIPLES)
 
         while results.has_next():
             s, p, o = results.get_next()

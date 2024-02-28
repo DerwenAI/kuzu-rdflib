@@ -11,7 +11,7 @@ import rdflib  # type: ignore
 
 
 rdflib.plugin.register(
-    "ffurf",
+    "kuzudb",
     rdflib.store.Store,
     "graph",
     "PropertyGraph",
@@ -20,15 +20,15 @@ rdflib.plugin.register(
 
 if __name__ == "__main__":
     graph = rdflib.Graph(
-        store = "ffurf",
-        identifier = "spatzle",
+        store = "kuzudb",
+        identifier = "xyzzy",
     )
 
 
     query = """
-SELECT ?src ?dst
+SELECT ?src ?rel ?dst
 WHERE {
-  ?src <http://purl.org/heals/food/hasIngredient> ?dst .
+  ?src ?rel ?dst .
 }"""
 
     res = graph.query(query)
