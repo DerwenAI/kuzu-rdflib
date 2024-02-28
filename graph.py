@@ -17,11 +17,13 @@ import rdflib  # type: ignore
 
 
 QUERY_TRIPLES: str = """
-MATCH (s)-[p:UniKG_rt]-(o) RETURN s.iri, p.iri, o.iri
+MATCH (s)-[p:UniKG_rt|UniKG_lt]->(o)
+RETURN s.iri, p.iri, o.iri, o.val
 """
 
 QUERY_COUNT: str = """
-MATCH (s)-[p:UniKG_rt]-(o) RETURN count(*)
+MATCH (s)-[p:UniKG_rt]-(o)
+RETURN count(*)
 """
 
 
@@ -123,6 +125,7 @@ Remove the set of triples matching the pattern from the store.
         triple_pattern: rdflib.graph._TriplePatternType,
         *,
         context: typing.Optional[ rdflib.graph._ContextType ] = None,  # pylint: disable=W0613
+        debug: bool = None,
         ) -> typing.Iterator[
             typing.Tuple[
                 rdflib.graph._TripleType,
@@ -142,10 +145,35 @@ A conjunctive query can be indicated by either providing a value of None, or a s
 
         results: kuzu.query_result.QueryResult = self.conn.execute(QUERY_TRIPLES)
 
+        if debug:
+            ic(triple_pattern)
+
         while results.has_next():
-            s, p, o = results.get_next()
-            triple = ( rdflib.term.URIRef(s), rdflib.term.URIRef(p), rdflib.term.URIRef(o), )
-            yield triple, self.__contexts()
+            s_iri, p_iri, o_iri, o_val = results.get_next()
+
+            if debug:
+                ic(s_iri, p_iri, o_iri, o_val)
+
+            if o_iri is not None:
+                triple = ( rdflib.term.URIRef(s_iri), rdflib.term.URIRef(p_iri), rdflib.term.URIRef(o_iri), )
+            else:
+                triple = ( rdflib.term.URIRef(s_iri), rdflib.term.URIRef(p_iri), rdflib.term.Literal(o_val), )
+
+            is_match: bool = True
+
+            for i in range(3):
+                if triple_pattern[i] is not None and triple_pattern[i] != triple[i]:
+                    if debug:
+                        print("fail", i, triple)
+    
+                    is_match = False
+                    break
+
+            if is_match:
+                if debug:
+                    print("  !!YIELD", triple)
+
+                yield triple, self.__contexts()
 
 
     def __len__ (  # type: ignore # pylint: disable=W0221,W0222

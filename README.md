@@ -10,6 +10,9 @@ For details about these libraries, see:
 
   - RDF support in KùzuDB <https://kuzudb.com/docusaurus/rdf-graphs/>
   - RDFlib <https://rdflib.readthedocs.io/>
+  - pySHACL <https://github.com/RDFLib/pySHACL>
+  - SHACL <https://www.w3.org/TR/shacl/>
+  - OWL-RL <https://github.com/RDFLib/OWL-RL>
 
 
 ## Set up
