@@ -37,7 +37,8 @@ rm -rf db
 python3 sparql.py
 ```
 
-Then run the `demo.py` script to perform a SPARQL query:
+Then run the `demo.py` script to perform an example SPARQL query
+and SHACL validation:
 
 ```bash
 python3 demo.py
