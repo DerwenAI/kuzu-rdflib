@@ -20,11 +20,12 @@ For details about these libraries, see:
 git clone https://github.com/DerwenAI/kuzu-rdflib.git
 cd kuzu-rdflib
 
-python3 -m venv venv
-source venv/bin/activate
+# Use uv to create a virtual environment
+uv venv
+source .venv/bin/activate
 
-python3 -m pip install -U pip wheel setuptools
-python3 -m pip install -r requirements.txt
+uv pip install -U wheel setuptools
+uv pip install -r requirements.txt
 ```
 
 ## Usage
