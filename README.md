@@ -16,8 +16,6 @@ For details about these libraries, see:
 
 ## Set up
 
-These steps use the [`uv` package manager](https://github.com/astral-sh/uv) to create a virtual environment.
-
 ```bash
 git clone https://github.com/DerwenAI/kuzu-rdflib.git
 cd kuzu-rdflib
