@@ -63,8 +63,8 @@ kz:PersonShape
     a sh:NodeShape ;
     sh:targetClass kz:student ;
     sh:property [
-        sh:path kz:name ;
-        sh:minLength 5
+        sh:path kz:age ;
+        sh:datatype xsd:integer
     ] .
 """
 
