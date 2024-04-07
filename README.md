@@ -22,12 +22,11 @@ These steps use the [`uv` package manager](https://github.com/astral-sh/uv) to c
 git clone https://github.com/DerwenAI/kuzu-rdflib.git
 cd kuzu-rdflib
 
-# Use uv to create a virtual environment
-uv venv
-source .venv/bin/activate
+python3 -m venv venv
+source venv/bin/activate
 
-uv pip install -U wheel setuptools
-uv pip install -r requirements.txt
+python3 -m pip install -U pip wheel setuptools
+python3 -m pip install -r requirements.txt
 ```
 
 ## Usage
