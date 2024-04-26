@@ -13,23 +13,24 @@ import kuzu
 
 
 if __name__ == "__main__":
-    DB_DIR: str = "db"
-    db_path: pathlib.Path = pathlib.Path(DB_DIR)
+    DB_PATH: str = "db"
+    DB_NAME: str = "UniKG"
+    db_path: pathlib.Path = pathlib.Path(DB_PATH)
 
     # remove pre-existing data from prior runs
     if db_path.exists() and db_path.is_dir():
         shutil.rmtree(db_path)
 
     # populate the RDF tables
-    db = kuzu.Database(DB_DIR)
+    db = kuzu.Database(DB_PATH)
     conn = kuzu.Connection(db)
 
-    conn.execute("CREATE RDFGraph UniKG")
-    conn.execute("COPY UniKG FROM 'uni.ttl'")
+    conn.execute(f"CREATE RDFGraph {DB_NAME}")
+    conn.execute(f"COPY {DB_NAME} FROM 'uni.ttl'")
 
     # run a query
-    query: str = """
-    MATCH (s)-[p:UniKG_rt]-(o) RETURN s.iri, p.iri, o.iri
+    query: str = f"""
+    MATCH (s)-[p:{DB_NAME}_rt]-(o) RETURN s.iri, p.iri, o.iri
     """
 
     results = conn.execute(query)
