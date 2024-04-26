@@ -5,12 +5,13 @@
 Proof-of-concept for RDFlib atop KùzuDB
 """
 
+import json
 import typing
 
-from icecream import ic
-import pandas as pd
-import pyshacl  # type: ignore
-import rdflib  # type: ignore
+from icecream import ic  # pylint: disable=E0401
+import pandas as pd  # pylint: disable=E0401
+import pyshacl  # type: ignore  # pylint: disable=E0401
+import rdflib  # type: ignore  # pylint: disable=E0401
 
 
 rdflib.plugin.register(
@@ -29,7 +30,11 @@ if __name__ == "__main__":
     )
 
     graph.open(
-        configuration = "db",
+        configuration = json.dumps({
+            "db_path": "db",
+            "db_rt": "UniKG_rt",
+            "db_lt": "UniKG_lt",
+        }),
         create = True,
     )
 
@@ -39,22 +44,22 @@ if __name__ == "__main__":
 
 
     ## run a SPARQL query
-    query = """
+    QUERY: str = """
 SELECT ?src ?rel ?dst
 WHERE {
   ?src ?rel ?dst .
 }"""
 
     df: pd.DataFrame = pd.DataFrame([
-        r.asdict() for r in graph.query(query)
+        r.asdict() for r in graph.query(QUERY)
     ])
 
-    print(query.strip())
+    print(QUERY.strip())
     ic(df)
 
 
     ## run a SHACL report on the RDF data
-    shapes_graph = """
+    SHAPES_GRAPH: str = """
 @prefix sh:   <http://www.w3.org/ns/shacl#> .
 @prefix xsd:  <http://www.w3.org/2001/XMLSchema#> .
 @prefix kz: <http://kuzu.io/rdf-ex#> .
@@ -70,7 +75,7 @@ kz:PersonShape
 
     results: typing.Tuple = pyshacl.validate(
         graph,
-        shacl_graph = shapes_graph,
+        shacl_graph = SHAPES_GRAPH,
         data_graph_format = "json-ld",
         shacl_graph_format = "ttl",
         #inference = "rdfs",
@@ -84,7 +89,7 @@ kz:PersonShape
 
 
     ## run a more constrained SPARQL query
-    query = """
+    QUERY = """
 PREFIX kz: <http://kuzu.io/rdf-ex#>
 SELECT DISTINCT ?src ?name
 WHERE {
@@ -92,9 +97,9 @@ WHERE {
   ?src kz:name ?name .
 }"""
 
-    df: pd.DataFrame = pd.DataFrame([
-        r.asdict() for r in graph.query(query)
+    df = pd.DataFrame([
+        r.asdict() for r in graph.query(QUERY)
     ])
 
-    print(query.strip())
+    print(QUERY.strip())
     ic(df)
