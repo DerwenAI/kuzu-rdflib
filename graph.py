@@ -5,26 +5,15 @@
 RDFlib `Store` plugin for adapting RDF/W3C functionality into KùzuDB
 """
 
-import pathlib
+import json
 import typing
 
-from icecream import ic
-import chocolate  # type: ignore
-import kuzu
+from icecream import ic  # pylint: disable=E0401
+import chocolate  # type: ignore  # pylint: disable=E0401
+import kuzu  # pylint: disable=E0401
 
-from rdflib.plugins.sparql.sparql import Query, Update
-import rdflib  # type: ignore
-
-
-QUERY_TRIPLES: str = """
-MATCH (s)-[p:UniKG_rt|UniKG_lt]->(o)
-RETURN s.iri, p.iri, o.iri, o.val
-"""
-
-QUERY_COUNT: str = """
-MATCH (s)-[p:UniKG_rt]-(o)
-RETURN count(*)
-"""
+from rdflib.plugins.sparql.sparql import Query, Update  # pylint: disable=E0401
+import rdflib  # type: ignore  # pylint: disable=E0401
 
 
 ######################################################################
@@ -35,6 +24,16 @@ class PropertyGraph (rdflib.store.Store):
 A subclass of `rdflib.store.Store` to use as a plugin, to integrate
 the W3C stack in Python.
     """
+    QUERY_TRIPLES: str = """
+MATCH (s)-[p:{}|{}]->(o)
+RETURN s.iri, p.iri, o.iri, o.val
+    """
+
+    QUERY_COUNT: str = """
+MATCH (s)-[p:{}]-(o)
+RETURN count(*)
+    """
+
 
     def __init__ (
         self,
@@ -52,6 +51,8 @@ Instance constructor
         self.__prefix: typing.Dict[ rdflib.term.URIRef, str ] = {}
 
         self.conn: typing.Optional[ kuzu.Connection ] = None
+        self.db_rt: str = "UniKG_rt"
+        self.db_lt: str = "UniKG_lt"
 
 
 ######################################################################
@@ -72,17 +73,23 @@ which is a private member of the `rdflib.Graph` object.
     def open (
         self,
         configuration: str,
-        create: bool = False,
+        create: bool = False,  # pylint: disable=W0613
         ) -> typing.Optional[ int ]:
         """
 Opens the Store/connection specified by the configuration string.
         """
-        self.conn = kuzu.Connection(kuzu.Database(configuration))
+        config_data: dict = json.loads(configuration)
+
+        db: kuzu.Database = kuzu.Database(config_data["db_path"])  # pylint: disable=C0103
+        self.conn = kuzu.Connection(db)
+
+        self.db_rt = config_data["db_rt"]
+        self.db_lt = config_data["db_lt"]
 
         return rdflib.store.VALID_STORE
 
 
-    def add (  # type: ignore # pylint: disable=R0201,W0221
+    def add (  # type: ignore # pylint: disable=W0221
         self,
         triple: typing.Tuple,
         *,
@@ -101,12 +108,12 @@ argument be `True`.
 It should also be an error for the quoted argument to be `True` when
 the store is not formula-aware.
         """
-        s, p, o = triple  # pylint: disable=W0612
+        s, p, o = triple  # pylint: disable=C0103,W0612
         # DO SOMETHING?
         # We're ignoring this operation, for now
 
 
-    def remove (  # type: ignore # pylint: disable=R0201,W0221
+    def remove (  # type: ignore # pylint: disable=W0221
         self,
         triple_pattern: typing.Tuple,
         *,
@@ -115,17 +122,17 @@ the store is not formula-aware.
         """
 Remove the set of triples matching the pattern from the store.
         """
-        s, p, o = triple_pattern  # pylint: disable=W0612
+        s, p, o = triple_pattern  # pylint: disable=C0103,W0612
         # DO SOMETHING?
         # We're ignoring this operation, for now
 
 
-    def triples (  # type: ignore # pylint: disable=R0201,W0221
+    def triples (  # type: ignore # pylint: disable=W0221
         self,
         triple_pattern: rdflib.graph._TriplePatternType,
         *,
         context: typing.Optional[ rdflib.graph._ContextType ] = None,  # pylint: disable=W0613
-        debug: bool = None,
+        debug: bool = False,
         ) -> typing.Iterator[
             typing.Tuple[
                 rdflib.graph._TripleType,
@@ -136,14 +143,17 @@ Remove the set of triples matching the pattern from the store.
 A generator over all the triples matching the pattern.
 
     triple_pattern:
-Can include any objects for used for comparing against nodes in the store, for example, REGEXTerm, URIRef, Literal, BNode, Variable, Graph, QuotedGraph, Date? DateRange?
+Can include any objects for used for comparing against nodes in the
+store, for example, REGEXTerm, URIRef, Literal, BNode, Variable, Graph,
+QuotedGraph, Date? DateRange?
 
     context:
-A conjunctive query can be indicated by either providing a value of None, or a specific context can be queries by passing a Graph instance (if store is context aware).  (currently IGNORED)
+A conjunctive query can be indicated by either providing a value of
+None, or a specific context can be queries by passing a Graph instance
+(if store is context aware).  (currently IGNORED)
         """
-        global QUERY_TRIPLES
-
-        results: kuzu.query_result.QueryResult = self.conn.execute(QUERY_TRIPLES)
+        query: str = self.QUERY_TRIPLES.format(self.db_rt, self.db_lt)
+        results: kuzu.query_result.QueryResult = self.conn.execute(query)  # type: ignore
 
         if debug:
             ic(triple_pattern)
@@ -155,9 +165,17 @@ A conjunctive query can be indicated by either providing a value of None, or a s
                 ic(s_iri, p_iri, o_iri, o_val)
 
             if o_iri is not None:
-                triple = ( rdflib.term.URIRef(s_iri), rdflib.term.URIRef(p_iri), rdflib.term.URIRef(o_iri), )
+                triple = (
+                    rdflib.term.URIRef(s_iri),
+                    rdflib.term.URIRef(p_iri),
+                    rdflib.term.URIRef(o_iri),
+                )
             else:
-                triple = ( rdflib.term.URIRef(s_iri), rdflib.term.URIRef(p_iri), rdflib.term.Literal(o_val), )
+                triple = (
+                    rdflib.term.URIRef(s_iri),
+                    rdflib.term.URIRef(p_iri),
+                    rdflib.term.Literal(o_val),
+                )
 
             is_match: bool = True
 
@@ -165,7 +183,7 @@ A conjunctive query can be indicated by either providing a value of None, or a s
                 if triple_pattern[i] is not None and triple_pattern[i] != triple[i]:
                     if debug:
                         print("fail", i, triple)
-    
+
                     is_match = False
                     break
 
@@ -190,23 +208,22 @@ context given.
     context:
 a graph instance to query or None
         """
-        global QUERY_COUNT
-
-        results: kuzu.query_result.QueryResult = self.conn.execute(QUERY_COUNT)
+        query: str = self.QUERY_COUNT.format(self.db_rt)
+        results: kuzu.query_result.QueryResult = self.conn.execute(query)  # type: ignore
         count: int = results.get_next()[0]
 
         return count
 
 
-    def __contexts (  # pylint: disable=R0201
+    def __contexts (
         self
         ) -> typing.Generator[ rdflib.graph._ContextType, None, None ]:
         """
 A no-op, since contexts are not yet supported.
         """
         # best way to return an empty generator
-        l: list = []
-        return (c for c in l)
+        context_list: list = []
+        return (c for c in context_list)
 
 
     def bind (
@@ -214,7 +231,7 @@ A no-op, since contexts are not yet supported.
         prefix: str,
         namespace: rdflib.term.URIRef,
         *,
-        override: bool = True,
+        override: bool = True,  # pylint: disable=W0613
         ) -> None:
         """
 Should be identical to `Memory.bind`
@@ -256,9 +273,9 @@ Should be identical to `Memory.namespaces`
     def query (  # pylint: disable=W0235
         self,
         query: typing.Union[ Query, str ],
-        initNs: typing.Mapping[ str, typing.Any ],
-        initBindings: typing.Mapping[ str, rdflib.term.Identifier ],
-        queryGraph: typing.Any,
+        initNs: typing.Mapping[ str, typing.Any ],  # pylint: disable=C0103
+        initBindings: typing.Mapping[ str, rdflib.term.Identifier ],  # pylint: disable=C0103
+        queryGraph: typing.Any,  # pylint: disable=C0103
         **kwargs: typing.Any,
         ) -> rdflib.query.Result:
         """
@@ -285,9 +302,9 @@ Values other than None obviously only makes sense for context-aware stores.)
     def update (  # pylint: disable=W0235
         self,
         update: typing.Union[ Update, str ],
-        initNs: typing.Mapping[ str, typing.Any ],
-        initBindings: typing.Mapping[ str, rdflib.term.Identifier ],
-        queryGraph: typing.Any,
+        initNs: typing.Mapping[ str, typing.Any ],  # pylint: disable=C0103
+        initBindings: typing.Mapping[ str, rdflib.term.Identifier ],  # pylint: disable=C0103
+        queryGraph: typing.Any,  # pylint: disable=C0103
         **kwargs: typing.Any,
         ) -> None:
         """
