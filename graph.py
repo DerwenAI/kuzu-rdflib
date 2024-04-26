@@ -25,12 +25,12 @@ A subclass of `rdflib.store.Store` to use as a plugin, to integrate
 the W3C stack in Python.
     """
     QUERY_TRIPLES: str = """
-MATCH (s)-[p:{}|{}]->(o)
+MATCH (s)-[p:{}_rt|{}_lt]->(o)
 RETURN s.iri, p.iri, o.iri, o.val
     """
 
     QUERY_COUNT: str = """
-MATCH (s)-[p:{}]-(o)
+MATCH (s)-[p:{}_rt]-(o)
 RETURN count(*)
     """
 
@@ -51,8 +51,7 @@ Instance constructor
         self.__prefix: typing.Dict[ rdflib.term.URIRef, str ] = {}
 
         self.conn: typing.Optional[ kuzu.Connection ] = None
-        self.db_rt: str = "UniKG_rt"
-        self.db_lt: str = "UniKG_lt"
+        self.db_name: str = "UniKG"
 
 
 ######################################################################
@@ -83,8 +82,7 @@ Opens the Store/connection specified by the configuration string.
         db: kuzu.Database = kuzu.Database(config_data["db_path"])  # pylint: disable=C0103
         self.conn = kuzu.Connection(db)
 
-        self.db_rt = config_data["db_rt"]
-        self.db_lt = config_data["db_lt"]
+        self.db_name = config_data["db_name"]
 
         return rdflib.store.VALID_STORE
 
@@ -152,7 +150,7 @@ A conjunctive query can be indicated by either providing a value of
 None, or a specific context can be queries by passing a Graph instance
 (if store is context aware).  (currently IGNORED)
         """
-        query: str = self.QUERY_TRIPLES.format(self.db_rt, self.db_lt)
+        query: str = self.QUERY_TRIPLES.format(self.db_name, self.db_name)
         results: kuzu.query_result.QueryResult = self.conn.execute(query)  # type: ignore
 
         if debug:
@@ -208,7 +206,7 @@ context given.
     context:
 a graph instance to query or None
         """
-        query: str = self.QUERY_COUNT.format(self.db_rt)
+        query: str = self.QUERY_COUNT.format(self.db_name)
         results: kuzu.query_result.QueryResult = self.conn.execute(query)  # type: ignore
         count: int = results.get_next()[0]
 

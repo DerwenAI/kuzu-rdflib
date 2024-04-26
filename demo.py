@@ -32,8 +32,7 @@ if __name__ == "__main__":
     graph.open(
         configuration = json.dumps({
             "db_path": "db",
-            "db_rt": "UniKG_rt",
-            "db_lt": "UniKG_lt",
+            "db_name": "UniKG",
         }),
         create = True,
     )
