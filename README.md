@@ -44,7 +44,7 @@ python3 demo.py
 
 > [!NOTE]
 > Why we need to pin the dependency for Kùzu specifically:
-> - Starting from Kùzu v0.7.0, we will temporarily stop supporting RDFGraphs as the current implementation is not very scalable and maintainable. The Kùzu core team is thinking deeply about this, and we have plans to re-implement RDFGraphs in Kùzu as an extension so that we don't have a bloated binary for the database.
-> - Users who want to experiment with pyshacl and rdflib using Kùzu can still do so using the pinned versions of packages specified in this repo.
+> - Starting from Kùzu v0.7.0, we will temporarily stop supporting RDFGraphs as the current implementation is not very scalable and maintainable. The Kùzu core team has made plans to re-implement RDFGraphs in Kùzu as an extension so that we don't have a bloated binary for the database. Stay tuned!
+> - Users who want to experiment with `pyshacl` and `rdflib` using Kùzu can still do so using the pinned versions of packages specified in this repo.
 >
 > Please join the Kùzu [Discord](https://kuzudb.com/chat) if you want to discuss more on RDF graphs and Kùzu!
